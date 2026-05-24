@@ -38,12 +38,13 @@ module Convolver
     localparam ISSUE_PSUM       = 5'd7;
     localparam WAIT_PSUM        = 5'd8;
     localparam LOAD_MAC         = 5'd9;
-    localparam MUL_MAC          = 5'd10;
-    localparam SUM_MAC          = 5'd11;
-    localparam ACCUMULATE       = 5'd12;
-    localparam WRITE_FEATURE    = 5'd13;
-    localparam ADVANCE_PIXEL    = 5'd14;
-    localparam DONE             = 5'd15;
+    localparam PRELOAD_FILTER   = 5'd10;
+    localparam MUL_MAC          = 5'd11;
+    localparam SUM_MAC          = 5'd12;
+    localparam ACCUMULATE       = 5'd13;
+    localparam WRITE_FEATURE    = 5'd14;
+    localparam ADVANCE_PIXEL    = 5'd15;
+    localparam DONE             = 5'd16;
 
     reg [4:0] cur_state, next_state;
     reg [6:0] cur_filter_idx, next_filter_idx;
@@ -203,6 +204,21 @@ module Convolver
                 win40 <= win41; win41 <= win42; win42 <= win43; win43 <= win44; win44 <= IMAGE_RAM_DIN;
             end
 
+            if(cur_state == PRELOAD_FILTER) begin
+                filter_pipe1 <= filter_buf[cur_filter_base];
+                filter_pipe2 <= filter_buf[cur_filter_base + 1];
+                filter_pipe3 <= filter_buf[cur_filter_base + 2];
+                filter_pipe4 <= filter_buf[cur_filter_base + 3];
+                filter_pipe5 <= filter_buf[cur_filter_base + 4];
+            end
+            else if((cur_state == ACCUMULATE) && (cur_kernel_row != 3'd4)) begin
+                filter_pipe1 <= filter_buf[cur_filter_base + FILTER_WIDTH];
+                filter_pipe2 <= filter_buf[cur_filter_base + FILTER_WIDTH + 1];
+                filter_pipe3 <= filter_buf[cur_filter_base + FILTER_WIDTH + 2];
+                filter_pipe4 <= filter_buf[cur_filter_base + FILTER_WIDTH + 3];
+                filter_pipe5 <= filter_buf[cur_filter_base + FILTER_WIDTH + 4];
+            end
+
             if(cur_state == LOAD_MAC) begin
                 case(cur_kernel_row)
                     3'd0: begin
@@ -241,11 +257,6 @@ module Convolver
                         ifmap_pipe5 <= win44;
                     end
                 endcase
-                filter_pipe1 <= filter_buf[cur_filter_base];
-                filter_pipe2 <= filter_buf[cur_filter_base + 1];
-                filter_pipe3 <= filter_buf[cur_filter_base + 2];
-                filter_pipe4 <= filter_buf[cur_filter_base + 3];
-                filter_pipe5 <= filter_buf[cur_filter_base + 4];
             end
         end
     end
@@ -325,7 +336,7 @@ module Convolver
                 if(cur_compute_channel == 0) begin
                     next_acc = 0;
                     next_filter_base = filter_base;
-                    next_state = LOAD_MAC;
+                    next_state = PRELOAD_FILTER;
                 end
                 else begin
                     next_state = ISSUE_PSUM;
@@ -338,8 +349,11 @@ module Convolver
                 if(FEATURE_RAM_DATA_VAL) begin
                     next_acc = FEATURE_RAM_DIN;
                     next_filter_base = filter_base;
-                    next_state = LOAD_MAC;
+                    next_state = PRELOAD_FILTER;
                 end
+            end
+            PRELOAD_FILTER: begin
+                next_state = LOAD_MAC;
             end
             LOAD_MAC: begin
                 next_state = MUL_MAC;
