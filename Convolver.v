@@ -38,12 +38,13 @@ module Convolver
     localparam ISSUE_PSUM       = 5'd7;
     localparam WAIT_PSUM        = 5'd8;
     localparam LOAD_MAC         = 5'd9;
-    localparam MUL_MAC          = 5'd10;
-    localparam SUM_MAC          = 5'd11;
-    localparam ACCUMULATE       = 5'd12;
-    localparam WRITE_FEATURE    = 5'd13;
-    localparam ADVANCE_PIXEL    = 5'd14;
-    localparam DONE             = 5'd15;
+    localparam READ_FILTER      = 5'd10;
+    localparam MUL_MAC          = 5'd11;
+    localparam SUM_MAC          = 5'd12;
+    localparam ACCUMULATE       = 5'd13;
+    localparam WRITE_FEATURE    = 5'd14;
+    localparam ADVANCE_PIXEL    = 5'd15;
+    localparam DONE             = 5'd16;
 
     reg [4:0] cur_state, next_state;
     reg [6:0] cur_filter_idx, next_filter_idx;
@@ -59,6 +60,7 @@ module Convolver
     reg [4:0] cur_out_y, next_out_y;
     reg [1:0] cur_compute_channel, next_compute_channel;
     reg [2:0] cur_kernel_row, next_kernel_row;
+    reg [6:0] cur_filter_base, next_filter_base;
     reg signed [2*BITWIDTH-1:0] cur_acc, next_acc;
 
     reg signed [BITWIDTH-1:0] filter_buf [0:3*FILTER_WIDTH*FILTER_WIDTH-1];
@@ -143,6 +145,7 @@ module Convolver
             cur_out_y <= 0;
             cur_compute_channel <= 0;
             cur_kernel_row <= 0;
+            cur_filter_base <= 0;
             cur_acc <= 0;
             win00 <= 0; win01 <= 0; win02 <= 0; win03 <= 0; win04 <= 0;
             win10 <= 0; win11 <= 0; win12 <= 0; win13 <= 0; win14 <= 0;
@@ -175,6 +178,7 @@ module Convolver
             cur_out_y <= next_out_y;
             cur_compute_channel <= next_compute_channel;
             cur_kernel_row <= next_kernel_row;
+            cur_filter_base <= next_filter_base;
             cur_acc <= next_acc;
 
             if((cur_state == WAIT_FILTER) && FILTER_RAM_DATA_VAL) begin
@@ -238,11 +242,14 @@ module Convolver
                         ifmap_pipe5 <= win44;
                     end
                 endcase
-                filter_pipe1 <= filter_buf[filter_base];
-                filter_pipe2 <= filter_buf[filter_base + 1];
-                filter_pipe3 <= filter_buf[filter_base + 2];
-                filter_pipe4 <= filter_buf[filter_base + 3];
-                filter_pipe5 <= filter_buf[filter_base + 4];
+            end
+
+            if(cur_state == READ_FILTER) begin
+                filter_pipe1 <= filter_buf[cur_filter_base];
+                filter_pipe2 <= filter_buf[cur_filter_base + 1];
+                filter_pipe3 <= filter_buf[cur_filter_base + 2];
+                filter_pipe4 <= filter_buf[cur_filter_base + 3];
+                filter_pipe5 <= filter_buf[cur_filter_base + 4];
             end
         end
     end
@@ -262,6 +269,7 @@ module Convolver
         next_out_y = cur_out_y;
         next_compute_channel = cur_compute_channel;
         next_kernel_row = cur_kernel_row;
+        next_filter_base = cur_filter_base;
         next_acc = cur_acc;
 
         case(cur_state)
@@ -280,6 +288,7 @@ module Convolver
                 next_out_y = 0;
                 next_compute_channel = 0;
                 next_kernel_row = 0;
+                next_filter_base = 0;
                 next_acc = 0;
             end
             ISSUE_FILTER: begin
@@ -335,6 +344,10 @@ module Convolver
                 end
             end
             LOAD_MAC: begin
+                next_filter_base = filter_base;
+                next_state = READ_FILTER;
+            end
+            READ_FILTER: begin
                 next_state = MUL_MAC;
             end
             MUL_MAC: begin
