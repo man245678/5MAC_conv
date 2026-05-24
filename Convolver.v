@@ -38,7 +38,7 @@ module Convolver
     localparam ISSUE_PSUM       = 5'd7;
     localparam WAIT_PSUM        = 5'd8;
     localparam LOAD_MAC         = 5'd9;
-    localparam PRELOAD_FILTER   = 5'd10;
+    localparam READ_FILTER      = 5'd10;
     localparam MUL_MAC          = 5'd11;
     localparam SUM_MAC          = 5'd12;
     localparam ACCUMULATE       = 5'd13;
@@ -204,19 +204,12 @@ module Convolver
                 win40 <= win41; win41 <= win42; win42 <= win43; win43 <= win44; win44 <= IMAGE_RAM_DIN;
             end
 
-            if(cur_state == PRELOAD_FILTER) begin
+            if(cur_state == READ_FILTER) begin
                 filter_pipe1 <= filter_buf[cur_filter_base];
                 filter_pipe2 <= filter_buf[cur_filter_base + 1];
                 filter_pipe3 <= filter_buf[cur_filter_base + 2];
                 filter_pipe4 <= filter_buf[cur_filter_base + 3];
                 filter_pipe5 <= filter_buf[cur_filter_base + 4];
-            end
-            else if((cur_state == ACCUMULATE) && (cur_kernel_row != 3'd4)) begin
-                filter_pipe1 <= filter_buf[cur_filter_base + FILTER_WIDTH];
-                filter_pipe2 <= filter_buf[cur_filter_base + FILTER_WIDTH + 1];
-                filter_pipe3 <= filter_buf[cur_filter_base + FILTER_WIDTH + 2];
-                filter_pipe4 <= filter_buf[cur_filter_base + FILTER_WIDTH + 3];
-                filter_pipe5 <= filter_buf[cur_filter_base + FILTER_WIDTH + 4];
             end
 
             if(cur_state == LOAD_MAC) begin
@@ -336,7 +329,7 @@ module Convolver
                 if(cur_compute_channel == 0) begin
                     next_acc = 0;
                     next_filter_base = filter_base;
-                    next_state = PRELOAD_FILTER;
+                    next_state = LOAD_MAC;
                 end
                 else begin
                     next_state = ISSUE_PSUM;
@@ -349,13 +342,13 @@ module Convolver
                 if(FEATURE_RAM_DATA_VAL) begin
                     next_acc = FEATURE_RAM_DIN;
                     next_filter_base = filter_base;
-                    next_state = PRELOAD_FILTER;
+                    next_state = LOAD_MAC;
                 end
             end
-            PRELOAD_FILTER: begin
-                next_state = LOAD_MAC;
-            end
             LOAD_MAC: begin
+                next_state = READ_FILTER;
+            end
+            READ_FILTER: begin
                 next_state = MUL_MAC;
             end
             MUL_MAC: begin
@@ -377,7 +370,39 @@ module Convolver
                 end
             end
             WRITE_FEATURE: begin
-                next_state = ADVANCE_PIXEL;
+                if(last_col && last_row && last_channel) begin
+                    next_state = DONE;
+                end
+                else begin
+                    next_state = ISSUE_IMAGE;
+                    next_image_addr = cur_image_addr + 1;
+                end
+
+                if(last_col) begin
+                    next_pixel_col = 0;
+                    next_col_mod3 = 0;
+                    next_scan_x = 0;
+
+                    if(last_row) begin
+                        next_pixel_row = 0;
+                        next_row_mod3 = 0;
+                        next_scan_y = 0;
+                        if(!last_channel)
+                            next_channel = cur_channel + 1;
+                    end
+                    else begin
+                        next_pixel_row = cur_pixel_row + 1;
+                        next_row_mod3 = (cur_row_mod3 == 2'd2) ? 0 : cur_row_mod3 + 1;
+                        if(valid_row)
+                            next_scan_y = cur_scan_y + 1;
+                    end
+                end
+                else begin
+                    next_pixel_col = cur_pixel_col + 1;
+                    next_col_mod3 = (cur_col_mod3 == 2'd2) ? 0 : cur_col_mod3 + 1;
+                    if(valid_col)
+                        next_scan_x = cur_scan_x + 1;
+                end
             end
             ADVANCE_PIXEL: begin
                 if(last_col && last_row && last_channel) begin
