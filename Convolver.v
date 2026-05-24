@@ -47,6 +47,7 @@ module Convolver
 
     reg [4:0] cur_state, next_state;
     reg [6:0] cur_filter_idx, next_filter_idx;
+    reg [ADDR_WIDTH-1:0] cur_image_addr, next_image_addr;
     reg [1:0] cur_channel, next_channel;
     reg [6:0] cur_pixel_row, next_pixel_row;
     reg [6:0] cur_pixel_col, next_pixel_col;
@@ -101,8 +102,7 @@ module Convolver
     assign FEATURE_RAM_EN = (cur_state == ISSUE_PSUM) || (cur_state == WRITE_FEATURE);
     assign FEATURE_RAM_WEN = (cur_state == WRITE_FEATURE);
 
-    assign IMAGE_RAM_ADDRESS = cur_channel * IMAGE_WIDTH * IMAGE_WIDTH +
-                               cur_pixel_row * IMAGE_WIDTH + cur_pixel_col;
+    assign IMAGE_RAM_ADDRESS = cur_image_addr;
     assign FILTER_RAM_ADDRESS = cur_filter_idx;
     assign FEATURE_RAM_ADDRESS = cur_out_x + cur_out_y * FEATURE_WIDTH;
     assign FEATURE_RAM_DOUT = cur_acc;
@@ -131,6 +131,7 @@ module Convolver
         if(!resetn) begin
             cur_state <= IDLE;
             cur_filter_idx <= 0;
+            cur_image_addr <= 0;
             cur_channel <= 0;
             cur_pixel_row <= 0;
             cur_pixel_col <= 0;
@@ -162,6 +163,7 @@ module Convolver
         else begin
             cur_state <= next_state;
             cur_filter_idx <= next_filter_idx;
+            cur_image_addr <= next_image_addr;
             cur_channel <= next_channel;
             cur_pixel_row <= next_pixel_row;
             cur_pixel_col <= next_pixel_col;
@@ -248,6 +250,7 @@ module Convolver
     always @ (*) begin
         next_state = cur_state;
         next_filter_idx = cur_filter_idx;
+        next_image_addr = cur_image_addr;
         next_channel = cur_channel;
         next_pixel_row = cur_pixel_row;
         next_pixel_col = cur_pixel_col;
@@ -265,6 +268,7 @@ module Convolver
             IDLE: begin
                 next_state = ISSUE_FILTER;
                 next_filter_idx = 0;
+                next_image_addr = 0;
                 next_channel = 0;
                 next_pixel_row = 0;
                 next_pixel_col = 0;
@@ -359,6 +363,7 @@ module Convolver
                 end
                 else begin
                     next_state = ISSUE_IMAGE;
+                    next_image_addr = cur_image_addr + 1;
                 end
 
                 if(last_col) begin
