@@ -36,12 +36,13 @@ module Convolver
     localparam WAIT_IMAGE    = 4'd5;
     localparam STORE_IMAGE   = 4'd6;
     localparam CLEAR_ACC     = 4'd7;
-    localparam LOAD_MAC      = 4'd8;
-    localparam MUL_MAC       = 4'd9;
-    localparam SUM_MAC       = 4'd10;
-    localparam ACCUMULATE    = 4'd11;
-    localparam WRITE_FEATURE = 4'd12;
-    localparam DONE          = 4'd13;
+    localparam READ_OPERAND  = 4'd8;
+    localparam LOAD_MAC      = 4'd9;
+    localparam MUL_MAC       = 4'd10;
+    localparam SUM_MAC       = 4'd11;
+    localparam ACCUMULATE    = 4'd12;
+    localparam WRITE_FEATURE = 4'd13;
+    localparam DONE          = 4'd14;
 
     reg [3:0] cur_state, next_state;
     reg [6:0] cur_filter_idx, next_filter_idx;
@@ -52,6 +53,16 @@ module Convolver
     reg [2:0] cur_kernel_row, next_kernel_row;
     reg [1:0] cur_channel, next_channel;
     reg signed [2*BITWIDTH-1:0] cur_acc, next_acc;
+    reg signed [BITWIDTH-1:0] ifmap_pipe1;
+    reg signed [BITWIDTH-1:0] ifmap_pipe2;
+    reg signed [BITWIDTH-1:0] ifmap_pipe3;
+    reg signed [BITWIDTH-1:0] ifmap_pipe4;
+    reg signed [BITWIDTH-1:0] ifmap_pipe5;
+    reg signed [BITWIDTH-1:0] filter_pipe1;
+    reg signed [BITWIDTH-1:0] filter_pipe2;
+    reg signed [BITWIDTH-1:0] filter_pipe3;
+    reg signed [BITWIDTH-1:0] filter_pipe4;
+    reg signed [BITWIDTH-1:0] filter_pipe5;
 
     reg signed [BITWIDTH-1:0] row_buf0_ch0 [0:IMAGE_WIDTH-1];
     reg signed [BITWIDTH-1:0] row_buf0_ch1 [0:IMAGE_WIDTH-1];
@@ -148,16 +159,16 @@ module Convolver
         .LOAD(cur_state == LOAD_MAC),
         .MUL(cur_state == MUL_MAC),
         .SUM(cur_state == SUM_MAC),
-        .IFMAP_DATA_IN1(ifmap1),
-        .IFMAP_DATA_IN2(ifmap2),
-        .IFMAP_DATA_IN3(ifmap3),
-        .IFMAP_DATA_IN4(ifmap4),
-        .IFMAP_DATA_IN5(ifmap5),
-        .FILTER_DATA_IN1(filter1),
-        .FILTER_DATA_IN2(filter2),
-        .FILTER_DATA_IN3(filter3),
-        .FILTER_DATA_IN4(filter4),
-        .FILTER_DATA_IN5(filter5),
+        .IFMAP_DATA_IN1(ifmap_pipe1),
+        .IFMAP_DATA_IN2(ifmap_pipe2),
+        .IFMAP_DATA_IN3(ifmap_pipe3),
+        .IFMAP_DATA_IN4(ifmap_pipe4),
+        .IFMAP_DATA_IN5(ifmap_pipe5),
+        .FILTER_DATA_IN1(filter_pipe1),
+        .FILTER_DATA_IN2(filter_pipe2),
+        .FILTER_DATA_IN3(filter_pipe3),
+        .FILTER_DATA_IN4(filter_pipe4),
+        .FILTER_DATA_IN5(filter_pipe5),
         .MUL_DATA_OUT(mac_result)
     );
 
@@ -172,6 +183,16 @@ module Convolver
             cur_kernel_row <= 0;
             cur_channel <= 0;
             cur_acc <= 0;
+            ifmap_pipe1 <= 0;
+            ifmap_pipe2 <= 0;
+            ifmap_pipe3 <= 0;
+            ifmap_pipe4 <= 0;
+            ifmap_pipe5 <= 0;
+            filter_pipe1 <= 0;
+            filter_pipe2 <= 0;
+            filter_pipe3 <= 0;
+            filter_pipe4 <= 0;
+            filter_pipe5 <= 0;
         end
         else begin
             cur_state <= next_state;
@@ -183,6 +204,19 @@ module Convolver
             cur_kernel_row <= next_kernel_row;
             cur_channel <= next_channel;
             cur_acc <= next_acc;
+
+            if(cur_state == READ_OPERAND) begin
+                ifmap_pipe1 <= ifmap1;
+                ifmap_pipe2 <= ifmap2;
+                ifmap_pipe3 <= ifmap3;
+                ifmap_pipe4 <= ifmap4;
+                ifmap_pipe5 <= ifmap5;
+                filter_pipe1 <= filter1;
+                filter_pipe2 <= filter2;
+                filter_pipe3 <= filter3;
+                filter_pipe4 <= filter4;
+                filter_pipe5 <= filter5;
+            end
         end
     end
 
@@ -282,6 +316,9 @@ module Convolver
                 next_acc = 0;
                 next_kernel_row = 0;
                 next_channel = 0;
+                next_state = READ_OPERAND;
+            end
+            READ_OPERAND: begin
                 next_state = LOAD_MAC;
             end
             LOAD_MAC: begin
@@ -298,12 +335,12 @@ module Convolver
 
                 if(cur_channel != 2) begin
                     next_channel = cur_channel + 1;
-                    next_state = LOAD_MAC;
+                    next_state = READ_OPERAND;
                 end
                 else if(cur_kernel_row != 4) begin
                     next_channel = 0;
                     next_kernel_row = cur_kernel_row + 1;
-                    next_state = LOAD_MAC;
+                    next_state = READ_OPERAND;
                 end
                 else begin
                     next_channel = 0;
