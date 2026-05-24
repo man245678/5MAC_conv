@@ -37,12 +37,10 @@ module Convolver
     localparam STORE_IMAGE   = 4'd6;
     localparam CLEAR_ACC     = 4'd7;
     localparam READ_OPERAND  = 4'd8;
-    localparam LOAD_MAC      = 4'd9;
-    localparam MUL_MAC       = 4'd10;
-    localparam SUM_MAC       = 4'd11;
-    localparam ACCUMULATE    = 4'd12;
-    localparam WRITE_FEATURE = 4'd13;
-    localparam DONE          = 4'd14;
+    localparam MUL_MAC       = 4'd9;
+    localparam ACCUMULATE    = 4'd10;
+    localparam WRITE_FEATURE = 4'd11;
+    localparam DONE          = 4'd12;
 
     reg [3:0] cur_state, next_state;
     reg [6:0] cur_filter_idx, next_filter_idx;
@@ -141,9 +139,7 @@ module Convolver
     ) u_MAC (
         .CLK(clk),
         .RSTN(resetn),
-        .LOAD(cur_state == LOAD_MAC),
         .MUL(cur_state == MUL_MAC),
-        .SUM(cur_state == SUM_MAC),
         .IFMAP_DATA_IN1(ifmap_pipe1),
         .IFMAP_DATA_IN2(ifmap_pipe2),
         .IFMAP_DATA_IN3(ifmap_pipe3),
@@ -308,19 +304,13 @@ module Convolver
             READ_OPERAND: begin
                 if(cur_operand_col == 4) begin
                     next_operand_col = 0;
-                    next_state = LOAD_MAC;
+                    next_state = MUL_MAC;
                 end
                 else begin
                     next_operand_col = cur_operand_col + 1;
                 end
             end
-            LOAD_MAC: begin
-                next_state = MUL_MAC;
-            end
             MUL_MAC: begin
-                next_state = SUM_MAC;
-            end
-            SUM_MAC: begin
                 next_state = ACCUMULATE;
             end
             ACCUMULATE: begin
