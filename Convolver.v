@@ -53,11 +53,21 @@ module Convolver
     reg [1:0] cur_channel, next_channel;
     reg signed [2*BITWIDTH-1:0] cur_acc, next_acc;
 
-    reg signed [BITWIDTH-1:0] row_buf0 [0:3*IMAGE_WIDTH-1];
-    reg signed [BITWIDTH-1:0] row_buf1 [0:3*IMAGE_WIDTH-1];
-    reg signed [BITWIDTH-1:0] row_buf2 [0:3*IMAGE_WIDTH-1];
-    reg signed [BITWIDTH-1:0] row_buf3 [0:3*IMAGE_WIDTH-1];
-    reg signed [BITWIDTH-1:0] row_buf4 [0:3*IMAGE_WIDTH-1];
+    reg signed [BITWIDTH-1:0] row_buf0_ch0 [0:IMAGE_WIDTH-1];
+    reg signed [BITWIDTH-1:0] row_buf0_ch1 [0:IMAGE_WIDTH-1];
+    reg signed [BITWIDTH-1:0] row_buf0_ch2 [0:IMAGE_WIDTH-1];
+    reg signed [BITWIDTH-1:0] row_buf1_ch0 [0:IMAGE_WIDTH-1];
+    reg signed [BITWIDTH-1:0] row_buf1_ch1 [0:IMAGE_WIDTH-1];
+    reg signed [BITWIDTH-1:0] row_buf1_ch2 [0:IMAGE_WIDTH-1];
+    reg signed [BITWIDTH-1:0] row_buf2_ch0 [0:IMAGE_WIDTH-1];
+    reg signed [BITWIDTH-1:0] row_buf2_ch1 [0:IMAGE_WIDTH-1];
+    reg signed [BITWIDTH-1:0] row_buf2_ch2 [0:IMAGE_WIDTH-1];
+    reg signed [BITWIDTH-1:0] row_buf3_ch0 [0:IMAGE_WIDTH-1];
+    reg signed [BITWIDTH-1:0] row_buf3_ch1 [0:IMAGE_WIDTH-1];
+    reg signed [BITWIDTH-1:0] row_buf3_ch2 [0:IMAGE_WIDTH-1];
+    reg signed [BITWIDTH-1:0] row_buf4_ch0 [0:IMAGE_WIDTH-1];
+    reg signed [BITWIDTH-1:0] row_buf4_ch1 [0:IMAGE_WIDTH-1];
+    reg signed [BITWIDTH-1:0] row_buf4_ch2 [0:IMAGE_WIDTH-1];
     reg signed [BITWIDTH-1:0] filter_buf [0:3*FILTER_WIDTH*FILTER_WIDTH-1];
 
     wire [1:0] load_channel = (cur_load_idx < IMAGE_WIDTH) ? 0 :
@@ -71,19 +81,17 @@ module Convolver
     wire [6:0] active_abs_row = cur_feature_y * 3 + cur_kernel_row;
     wire [2:0] active_slot = active_abs_row % 5;
     wire [6:0] base_col = cur_feature_x * 3;
-    wire [8:0] active_base_col = cur_channel * IMAGE_WIDTH + base_col;
+    wire [6:0] idx_col0 = base_col + 0;
+    wire [6:0] idx_col1 = base_col + 1;
+    wire [6:0] idx_col2 = base_col + 2;
+    wire [6:0] idx_col3 = base_col + 3;
+    wire [6:0] idx_col4 = base_col + 4;
 
-    wire [8:0] idx_col0 = active_base_col + 0;
-    wire [8:0] idx_col1 = active_base_col + 1;
-    wire [8:0] idx_col2 = active_base_col + 2;
-    wire [8:0] idx_col3 = active_base_col + 3;
-    wire [8:0] idx_col4 = active_base_col + 4;
-
-    wire signed [BITWIDTH-1:0] ifmap1 = (active_slot == 0) ? row_buf0[idx_col0] : (active_slot == 1) ? row_buf1[idx_col0] : (active_slot == 2) ? row_buf2[idx_col0] : (active_slot == 3) ? row_buf3[idx_col0] : row_buf4[idx_col0];
-    wire signed [BITWIDTH-1:0] ifmap2 = (active_slot == 0) ? row_buf0[idx_col1] : (active_slot == 1) ? row_buf1[idx_col1] : (active_slot == 2) ? row_buf2[idx_col1] : (active_slot == 3) ? row_buf3[idx_col1] : row_buf4[idx_col1];
-    wire signed [BITWIDTH-1:0] ifmap3 = (active_slot == 0) ? row_buf0[idx_col2] : (active_slot == 1) ? row_buf1[idx_col2] : (active_slot == 2) ? row_buf2[idx_col2] : (active_slot == 3) ? row_buf3[idx_col2] : row_buf4[idx_col2];
-    wire signed [BITWIDTH-1:0] ifmap4 = (active_slot == 0) ? row_buf0[idx_col3] : (active_slot == 1) ? row_buf1[idx_col3] : (active_slot == 2) ? row_buf2[idx_col3] : (active_slot == 3) ? row_buf3[idx_col3] : row_buf4[idx_col3];
-    wire signed [BITWIDTH-1:0] ifmap5 = (active_slot == 0) ? row_buf0[idx_col4] : (active_slot == 1) ? row_buf1[idx_col4] : (active_slot == 2) ? row_buf2[idx_col4] : (active_slot == 3) ? row_buf3[idx_col4] : row_buf4[idx_col4];
+    reg signed [BITWIDTH-1:0] ifmap1;
+    reg signed [BITWIDTH-1:0] ifmap2;
+    reg signed [BITWIDTH-1:0] ifmap3;
+    reg signed [BITWIDTH-1:0] ifmap4;
+    reg signed [BITWIDTH-1:0] ifmap5;
 
     wire [6:0] filter_base = cur_channel * FILTER_WIDTH * FILTER_WIDTH +
                              cur_kernel_row * FILTER_WIDTH;
@@ -94,6 +102,32 @@ module Convolver
     wire signed [BITWIDTH-1:0] filter5 = filter_buf[filter_base + 4];
 
     wire signed [2*BITWIDTH-1:0] mac_result;
+
+    always @ (*) begin
+        ifmap1 = 0;
+        ifmap2 = 0;
+        ifmap3 = 0;
+        ifmap4 = 0;
+        ifmap5 = 0;
+
+        case({active_slot, cur_channel})
+            5'b00000: begin ifmap1 = row_buf0_ch0[idx_col0]; ifmap2 = row_buf0_ch0[idx_col1]; ifmap3 = row_buf0_ch0[idx_col2]; ifmap4 = row_buf0_ch0[idx_col3]; ifmap5 = row_buf0_ch0[idx_col4]; end
+            5'b00001: begin ifmap1 = row_buf0_ch1[idx_col0]; ifmap2 = row_buf0_ch1[idx_col1]; ifmap3 = row_buf0_ch1[idx_col2]; ifmap4 = row_buf0_ch1[idx_col3]; ifmap5 = row_buf0_ch1[idx_col4]; end
+            5'b00010: begin ifmap1 = row_buf0_ch2[idx_col0]; ifmap2 = row_buf0_ch2[idx_col1]; ifmap3 = row_buf0_ch2[idx_col2]; ifmap4 = row_buf0_ch2[idx_col3]; ifmap5 = row_buf0_ch2[idx_col4]; end
+            5'b00100: begin ifmap1 = row_buf1_ch0[idx_col0]; ifmap2 = row_buf1_ch0[idx_col1]; ifmap3 = row_buf1_ch0[idx_col2]; ifmap4 = row_buf1_ch0[idx_col3]; ifmap5 = row_buf1_ch0[idx_col4]; end
+            5'b00101: begin ifmap1 = row_buf1_ch1[idx_col0]; ifmap2 = row_buf1_ch1[idx_col1]; ifmap3 = row_buf1_ch1[idx_col2]; ifmap4 = row_buf1_ch1[idx_col3]; ifmap5 = row_buf1_ch1[idx_col4]; end
+            5'b00110: begin ifmap1 = row_buf1_ch2[idx_col0]; ifmap2 = row_buf1_ch2[idx_col1]; ifmap3 = row_buf1_ch2[idx_col2]; ifmap4 = row_buf1_ch2[idx_col3]; ifmap5 = row_buf1_ch2[idx_col4]; end
+            5'b01000: begin ifmap1 = row_buf2_ch0[idx_col0]; ifmap2 = row_buf2_ch0[idx_col1]; ifmap3 = row_buf2_ch0[idx_col2]; ifmap4 = row_buf2_ch0[idx_col3]; ifmap5 = row_buf2_ch0[idx_col4]; end
+            5'b01001: begin ifmap1 = row_buf2_ch1[idx_col0]; ifmap2 = row_buf2_ch1[idx_col1]; ifmap3 = row_buf2_ch1[idx_col2]; ifmap4 = row_buf2_ch1[idx_col3]; ifmap5 = row_buf2_ch1[idx_col4]; end
+            5'b01010: begin ifmap1 = row_buf2_ch2[idx_col0]; ifmap2 = row_buf2_ch2[idx_col1]; ifmap3 = row_buf2_ch2[idx_col2]; ifmap4 = row_buf2_ch2[idx_col3]; ifmap5 = row_buf2_ch2[idx_col4]; end
+            5'b01100: begin ifmap1 = row_buf3_ch0[idx_col0]; ifmap2 = row_buf3_ch0[idx_col1]; ifmap3 = row_buf3_ch0[idx_col2]; ifmap4 = row_buf3_ch0[idx_col3]; ifmap5 = row_buf3_ch0[idx_col4]; end
+            5'b01101: begin ifmap1 = row_buf3_ch1[idx_col0]; ifmap2 = row_buf3_ch1[idx_col1]; ifmap3 = row_buf3_ch1[idx_col2]; ifmap4 = row_buf3_ch1[idx_col3]; ifmap5 = row_buf3_ch1[idx_col4]; end
+            5'b01110: begin ifmap1 = row_buf3_ch2[idx_col0]; ifmap2 = row_buf3_ch2[idx_col1]; ifmap3 = row_buf3_ch2[idx_col2]; ifmap4 = row_buf3_ch2[idx_col3]; ifmap5 = row_buf3_ch2[idx_col4]; end
+            5'b10000: begin ifmap1 = row_buf4_ch0[idx_col0]; ifmap2 = row_buf4_ch0[idx_col1]; ifmap3 = row_buf4_ch0[idx_col2]; ifmap4 = row_buf4_ch0[idx_col3]; ifmap5 = row_buf4_ch0[idx_col4]; end
+            5'b10001: begin ifmap1 = row_buf4_ch1[idx_col0]; ifmap2 = row_buf4_ch1[idx_col1]; ifmap3 = row_buf4_ch1[idx_col2]; ifmap4 = row_buf4_ch1[idx_col3]; ifmap5 = row_buf4_ch1[idx_col4]; end
+            5'b10010: begin ifmap1 = row_buf4_ch2[idx_col0]; ifmap2 = row_buf4_ch2[idx_col1]; ifmap3 = row_buf4_ch2[idx_col2]; ifmap4 = row_buf4_ch2[idx_col3]; ifmap5 = row_buf4_ch2[idx_col4]; end
+        endcase
+    end
 
     assign IMAGE_RAM_EN = (cur_state == ISSUE_IMAGE);
     assign FILTER_RAM_EN = (cur_state == ISSUE_FILTER);
@@ -159,12 +193,22 @@ module Convolver
             filter_buf[cur_filter_idx] <= FILTER_RAM_DIN;
         end
         else if((cur_state == WAIT_IMAGE) && IMAGE_RAM_DATA_VAL) begin
-            case(load_slot)
-                3'd0: row_buf0[cur_load_idx] <= IMAGE_RAM_DIN;
-                3'd1: row_buf1[cur_load_idx] <= IMAGE_RAM_DIN;
-                3'd2: row_buf2[cur_load_idx] <= IMAGE_RAM_DIN;
-                3'd3: row_buf3[cur_load_idx] <= IMAGE_RAM_DIN;
-                3'd4: row_buf4[cur_load_idx] <= IMAGE_RAM_DIN;
+            case({load_slot, load_channel})
+                5'b00000: row_buf0_ch0[load_col] <= IMAGE_RAM_DIN;
+                5'b00001: row_buf0_ch1[load_col] <= IMAGE_RAM_DIN;
+                5'b00010: row_buf0_ch2[load_col] <= IMAGE_RAM_DIN;
+                5'b00100: row_buf1_ch0[load_col] <= IMAGE_RAM_DIN;
+                5'b00101: row_buf1_ch1[load_col] <= IMAGE_RAM_DIN;
+                5'b00110: row_buf1_ch2[load_col] <= IMAGE_RAM_DIN;
+                5'b01000: row_buf2_ch0[load_col] <= IMAGE_RAM_DIN;
+                5'b01001: row_buf2_ch1[load_col] <= IMAGE_RAM_DIN;
+                5'b01010: row_buf2_ch2[load_col] <= IMAGE_RAM_DIN;
+                5'b01100: row_buf3_ch0[load_col] <= IMAGE_RAM_DIN;
+                5'b01101: row_buf3_ch1[load_col] <= IMAGE_RAM_DIN;
+                5'b01110: row_buf3_ch2[load_col] <= IMAGE_RAM_DIN;
+                5'b10000: row_buf4_ch0[load_col] <= IMAGE_RAM_DIN;
+                5'b10001: row_buf4_ch1[load_col] <= IMAGE_RAM_DIN;
+                5'b10010: row_buf4_ch2[load_col] <= IMAGE_RAM_DIN;
             endcase
         end
     end
