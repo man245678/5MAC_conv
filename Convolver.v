@@ -37,8 +37,9 @@ module Convolver
     localparam STORE_IMAGE   = 4'd6;
     localparam CLEAR_ACC     = 4'd7;
     localparam COMPUTE       = 4'd8;
-    localparam WRITE_FEATURE = 4'd9;
-    localparam DONE          = 4'd10;
+    localparam ACCUMULATE    = 4'd9;
+    localparam WRITE_FEATURE = 4'd10;
+    localparam DONE          = 4'd11;
 
     reg [3:0] cur_state, next_state;
     reg [6:0] cur_filter_idx, next_filter_idx;
@@ -49,6 +50,7 @@ module Convolver
     reg [2:0] cur_kernel_row, next_kernel_row;
     reg [1:0] cur_channel, next_channel;
     reg signed [2*BITWIDTH-1:0] cur_acc, next_acc;
+    reg signed [2*BITWIDTH-1:0] mac_result_reg;
 
     reg signed [BITWIDTH-1:0] row_buf0 [0:3*IMAGE_WIDTH-1];
     reg signed [BITWIDTH-1:0] row_buf1 [0:3*IMAGE_WIDTH-1];
@@ -133,6 +135,7 @@ module Convolver
             cur_kernel_row <= 0;
             cur_channel <= 0;
             cur_acc <= 0;
+            mac_result_reg <= 0;
         end
         else begin
             cur_state <= next_state;
@@ -144,6 +147,9 @@ module Convolver
             cur_kernel_row <= next_kernel_row;
             cur_channel <= next_channel;
             cur_acc <= next_acc;
+
+            if(cur_state == COMPUTE)
+                mac_result_reg <= mac_result;
         end
     end
 
@@ -236,14 +242,19 @@ module Convolver
                 next_state = COMPUTE;
             end
             COMPUTE: begin
-                next_acc = cur_acc + mac_result;
+                next_state = ACCUMULATE;
+            end
+            ACCUMULATE: begin
+                next_acc = cur_acc + mac_result_reg;
 
                 if(cur_channel != 2) begin
                     next_channel = cur_channel + 1;
+                    next_state = COMPUTE;
                 end
                 else if(cur_kernel_row != 4) begin
                     next_channel = 0;
                     next_kernel_row = cur_kernel_row + 1;
+                    next_state = COMPUTE;
                 end
                 else begin
                     next_channel = 0;
