@@ -38,13 +38,12 @@ module Convolver
     localparam ISSUE_PSUM       = 5'd7;
     localparam WAIT_PSUM        = 5'd8;
     localparam LOAD_MAC         = 5'd9;
-    localparam READ_FILTER      = 5'd10;
-    localparam MUL_MAC          = 5'd11;
-    localparam SUM_MAC          = 5'd12;
-    localparam ACCUMULATE       = 5'd13;
-    localparam WRITE_FEATURE    = 5'd14;
-    localparam ADVANCE_PIXEL    = 5'd15;
-    localparam DONE             = 5'd16;
+    localparam MUL_MAC          = 5'd10;
+    localparam SUM_MAC          = 5'd11;
+    localparam ACCUMULATE       = 5'd12;
+    localparam WRITE_FEATURE    = 5'd13;
+    localparam ADVANCE_PIXEL    = 5'd14;
+    localparam DONE             = 5'd15;
 
     reg [4:0] cur_state, next_state;
     reg [6:0] cur_filter_idx, next_filter_idx;
@@ -242,9 +241,6 @@ module Convolver
                         ifmap_pipe5 <= win44;
                     end
                 endcase
-            end
-
-            if(cur_state == READ_FILTER) begin
                 filter_pipe1 <= filter_buf[cur_filter_base];
                 filter_pipe2 <= filter_buf[cur_filter_base + 1];
                 filter_pipe3 <= filter_buf[cur_filter_base + 2];
@@ -328,6 +324,7 @@ module Convolver
             PREP_OUTPUT: begin
                 if(cur_compute_channel == 0) begin
                     next_acc = 0;
+                    next_filter_base = filter_base;
                     next_state = LOAD_MAC;
                 end
                 else begin
@@ -340,14 +337,11 @@ module Convolver
             WAIT_PSUM: begin
                 if(FEATURE_RAM_DATA_VAL) begin
                     next_acc = FEATURE_RAM_DIN;
+                    next_filter_base = filter_base;
                     next_state = LOAD_MAC;
                 end
             end
             LOAD_MAC: begin
-                next_filter_base = filter_base;
-                next_state = READ_FILTER;
-            end
-            READ_FILTER: begin
                 next_state = MUL_MAC;
             end
             MUL_MAC: begin
@@ -364,6 +358,7 @@ module Convolver
                 end
                 else begin
                     next_kernel_row = cur_kernel_row + 1;
+                    next_filter_base = cur_filter_base + FILTER_WIDTH;
                     next_state = LOAD_MAC;
                 end
             end
