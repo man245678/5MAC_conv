@@ -152,13 +152,13 @@ module Convolver
         end
     end
 
-    always @ (negedge clk or negedge resetn) begin
+    always @ (posedge clk or negedge resetn) begin
         if(!resetn) begin
         end
-        else if((cur_state == WAIT_FILTER || cur_state == STORE_FILTER) && FILTER_RAM_DATA_VAL) begin
+        else if((cur_state == WAIT_FILTER) && FILTER_RAM_DATA_VAL) begin
             filter_buf[cur_filter_idx] <= FILTER_RAM_DIN;
         end
-        else if((cur_state == WAIT_IMAGE || cur_state == STORE_IMAGE) && IMAGE_RAM_DATA_VAL) begin
+        else if((cur_state == WAIT_IMAGE) && IMAGE_RAM_DATA_VAL) begin
             case(load_slot)
                 3'd0: row_buf0[cur_load_idx] <= IMAGE_RAM_DIN;
                 3'd1: row_buf1[cur_load_idx] <= IMAGE_RAM_DIN;
