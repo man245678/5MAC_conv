@@ -1,30 +1,30 @@
-`define DECL_WIN(S,C) \
-    reg signed [BITWIDTH-1:0] win``S``_ch``C``_0 [0:FEATURE_WIDTH-1]; \
-    reg signed [BITWIDTH-1:0] win``S``_ch``C``_1 [0:FEATURE_WIDTH-1]; \
-    reg signed [BITWIDTH-1:0] win``S``_ch``C``_2 [0:FEATURE_WIDTH-1]; \
-    reg signed [BITWIDTH-1:0] win``S``_ch``C``_3 [0:FEATURE_WIDTH-1]; \
-    reg signed [BITWIDTH-1:0] win``S``_ch``C``_4 [0:FEATURE_WIDTH-1]
+`define DECL_WIN(A0,A1,A2,A3,A4) \
+    reg signed [BITWIDTH-1:0] A0 [0:FEATURE_WIDTH-1]; \
+    reg signed [BITWIDTH-1:0] A1 [0:FEATURE_WIDTH-1]; \
+    reg signed [BITWIDTH-1:0] A2 [0:FEATURE_WIDTH-1]; \
+    reg signed [BITWIDTH-1:0] A3 [0:FEATURE_WIDTH-1]; \
+    reg signed [BITWIDTH-1:0] A4 [0:FEATURE_WIDTH-1]
 
-`define READ_WIN(S,C) begin \
-    ifmap_pipe1 <= win``S``_ch``C``_0[cur_feature_x]; \
-    ifmap_pipe2 <= win``S``_ch``C``_1[cur_feature_x]; \
-    ifmap_pipe3 <= win``S``_ch``C``_2[cur_feature_x]; \
-    ifmap_pipe4 <= win``S``_ch``C``_3[cur_feature_x]; \
-    ifmap_pipe5 <= win``S``_ch``C``_4[cur_feature_x]; \
+`define READ_WIN(A0,A1,A2,A3,A4) begin \
+    ifmap_pipe1 <= A0[cur_feature_x]; \
+    ifmap_pipe2 <= A1[cur_feature_x]; \
+    ifmap_pipe3 <= A2[cur_feature_x]; \
+    ifmap_pipe4 <= A3[cur_feature_x]; \
+    ifmap_pipe5 <= A4[cur_feature_x]; \
 end
 
-`define STORE_WIN(S,C) begin \
+`define STORE_WIN(A0,A1,A2,A3,A4) begin \
     case(load_col_mod) \
         2'd0: begin \
-            if(load_fx < FEATURE_WIDTH) win``S``_ch``C``_0[load_fx] <= IMAGE_RAM_DIN; \
-            if(load_fx != 0) win``S``_ch``C``_3[load_fx - 1] <= IMAGE_RAM_DIN; \
+            if(load_fx < FEATURE_WIDTH) A0[load_fx] <= IMAGE_RAM_DIN; \
+            if(load_fx != 0) A3[load_fx - 1] <= IMAGE_RAM_DIN; \
         end \
         2'd1: begin \
-            if(load_fx < FEATURE_WIDTH) win``S``_ch``C``_1[load_fx] <= IMAGE_RAM_DIN; \
-            if(load_fx != 0) win``S``_ch``C``_4[load_fx - 1] <= IMAGE_RAM_DIN; \
+            if(load_fx < FEATURE_WIDTH) A1[load_fx] <= IMAGE_RAM_DIN; \
+            if(load_fx != 0) A4[load_fx - 1] <= IMAGE_RAM_DIN; \
         end \
         default: begin \
-            if(load_fx < FEATURE_WIDTH) win``S``_ch``C``_2[load_fx] <= IMAGE_RAM_DIN; \
+            if(load_fx < FEATURE_WIDTH) A2[load_fx] <= IMAGE_RAM_DIN; \
         end \
     endcase \
 end
@@ -95,21 +95,21 @@ module Convolver
     reg signed [BITWIDTH-1:0] filter_pipe4;
     reg signed [BITWIDTH-1:0] filter_pipe5;
 
-    `DECL_WIN(0,0);
-    `DECL_WIN(0,1);
-    `DECL_WIN(0,2);
-    `DECL_WIN(1,0);
-    `DECL_WIN(1,1);
-    `DECL_WIN(1,2);
-    `DECL_WIN(2,0);
-    `DECL_WIN(2,1);
-    `DECL_WIN(2,2);
-    `DECL_WIN(3,0);
-    `DECL_WIN(3,1);
-    `DECL_WIN(3,2);
-    `DECL_WIN(4,0);
-    `DECL_WIN(4,1);
-    `DECL_WIN(4,2);
+    `DECL_WIN(win0_ch0_0, win0_ch0_1, win0_ch0_2, win0_ch0_3, win0_ch0_4);
+    `DECL_WIN(win0_ch1_0, win0_ch1_1, win0_ch1_2, win0_ch1_3, win0_ch1_4);
+    `DECL_WIN(win0_ch2_0, win0_ch2_1, win0_ch2_2, win0_ch2_3, win0_ch2_4);
+    `DECL_WIN(win1_ch0_0, win1_ch0_1, win1_ch0_2, win1_ch0_3, win1_ch0_4);
+    `DECL_WIN(win1_ch1_0, win1_ch1_1, win1_ch1_2, win1_ch1_3, win1_ch1_4);
+    `DECL_WIN(win1_ch2_0, win1_ch2_1, win1_ch2_2, win1_ch2_3, win1_ch2_4);
+    `DECL_WIN(win2_ch0_0, win2_ch0_1, win2_ch0_2, win2_ch0_3, win2_ch0_4);
+    `DECL_WIN(win2_ch1_0, win2_ch1_1, win2_ch1_2, win2_ch1_3, win2_ch1_4);
+    `DECL_WIN(win2_ch2_0, win2_ch2_1, win2_ch2_2, win2_ch2_3, win2_ch2_4);
+    `DECL_WIN(win3_ch0_0, win3_ch0_1, win3_ch0_2, win3_ch0_3, win3_ch0_4);
+    `DECL_WIN(win3_ch1_0, win3_ch1_1, win3_ch1_2, win3_ch1_3, win3_ch1_4);
+    `DECL_WIN(win3_ch2_0, win3_ch2_1, win3_ch2_2, win3_ch2_3, win3_ch2_4);
+    `DECL_WIN(win4_ch0_0, win4_ch0_1, win4_ch0_2, win4_ch0_3, win4_ch0_4);
+    `DECL_WIN(win4_ch1_0, win4_ch1_1, win4_ch1_2, win4_ch1_3, win4_ch1_4);
+    `DECL_WIN(win4_ch2_0, win4_ch2_1, win4_ch2_2, win4_ch2_3, win4_ch2_4);
     reg signed [BITWIDTH-1:0] filter_buf [0:3*FILTER_WIDTH*FILTER_WIDTH-1];
 
     wire [1:0] load_channel = (cur_load_idx < IMAGE_WIDTH) ? 0 :
@@ -199,21 +199,21 @@ module Convolver
 
             if(cur_state == READ_OPERAND) begin
                 case({active_slot, cur_channel})
-                    5'b00000: `READ_WIN(0,0)
-                    5'b00001: `READ_WIN(0,1)
-                    5'b00010: `READ_WIN(0,2)
-                    5'b00100: `READ_WIN(1,0)
-                    5'b00101: `READ_WIN(1,1)
-                    5'b00110: `READ_WIN(1,2)
-                    5'b01000: `READ_WIN(2,0)
-                    5'b01001: `READ_WIN(2,1)
-                    5'b01010: `READ_WIN(2,2)
-                    5'b01100: `READ_WIN(3,0)
-                    5'b01101: `READ_WIN(3,1)
-                    5'b01110: `READ_WIN(3,2)
-                    5'b10000: `READ_WIN(4,0)
-                    5'b10001: `READ_WIN(4,1)
-                    5'b10010: `READ_WIN(4,2)
+                    5'b00000: `READ_WIN(win0_ch0_0, win0_ch0_1, win0_ch0_2, win0_ch0_3, win0_ch0_4)
+                    5'b00001: `READ_WIN(win0_ch1_0, win0_ch1_1, win0_ch1_2, win0_ch1_3, win0_ch1_4)
+                    5'b00010: `READ_WIN(win0_ch2_0, win0_ch2_1, win0_ch2_2, win0_ch2_3, win0_ch2_4)
+                    5'b00100: `READ_WIN(win1_ch0_0, win1_ch0_1, win1_ch0_2, win1_ch0_3, win1_ch0_4)
+                    5'b00101: `READ_WIN(win1_ch1_0, win1_ch1_1, win1_ch1_2, win1_ch1_3, win1_ch1_4)
+                    5'b00110: `READ_WIN(win1_ch2_0, win1_ch2_1, win1_ch2_2, win1_ch2_3, win1_ch2_4)
+                    5'b01000: `READ_WIN(win2_ch0_0, win2_ch0_1, win2_ch0_2, win2_ch0_3, win2_ch0_4)
+                    5'b01001: `READ_WIN(win2_ch1_0, win2_ch1_1, win2_ch1_2, win2_ch1_3, win2_ch1_4)
+                    5'b01010: `READ_WIN(win2_ch2_0, win2_ch2_1, win2_ch2_2, win2_ch2_3, win2_ch2_4)
+                    5'b01100: `READ_WIN(win3_ch0_0, win3_ch0_1, win3_ch0_2, win3_ch0_3, win3_ch0_4)
+                    5'b01101: `READ_WIN(win3_ch1_0, win3_ch1_1, win3_ch1_2, win3_ch1_3, win3_ch1_4)
+                    5'b01110: `READ_WIN(win3_ch2_0, win3_ch2_1, win3_ch2_2, win3_ch2_3, win3_ch2_4)
+                    5'b10000: `READ_WIN(win4_ch0_0, win4_ch0_1, win4_ch0_2, win4_ch0_3, win4_ch0_4)
+                    5'b10001: `READ_WIN(win4_ch1_0, win4_ch1_1, win4_ch1_2, win4_ch1_3, win4_ch1_4)
+                    5'b10010: `READ_WIN(win4_ch2_0, win4_ch2_1, win4_ch2_2, win4_ch2_3, win4_ch2_4)
                 endcase
                 filter_pipe1 <= filter_buf[filter_base];
                 filter_pipe2 <= filter_buf[filter_base + 1];
@@ -232,21 +232,21 @@ module Convolver
         end
         else if((cur_state == WAIT_IMAGE) && IMAGE_RAM_DATA_VAL) begin
             case({load_slot, load_channel})
-                5'b00000: `STORE_WIN(0,0)
-                5'b00001: `STORE_WIN(0,1)
-                5'b00010: `STORE_WIN(0,2)
-                5'b00100: `STORE_WIN(1,0)
-                5'b00101: `STORE_WIN(1,1)
-                5'b00110: `STORE_WIN(1,2)
-                5'b01000: `STORE_WIN(2,0)
-                5'b01001: `STORE_WIN(2,1)
-                5'b01010: `STORE_WIN(2,2)
-                5'b01100: `STORE_WIN(3,0)
-                5'b01101: `STORE_WIN(3,1)
-                5'b01110: `STORE_WIN(3,2)
-                5'b10000: `STORE_WIN(4,0)
-                5'b10001: `STORE_WIN(4,1)
-                5'b10010: `STORE_WIN(4,2)
+                5'b00000: `STORE_WIN(win0_ch0_0, win0_ch0_1, win0_ch0_2, win0_ch0_3, win0_ch0_4)
+                5'b00001: `STORE_WIN(win0_ch1_0, win0_ch1_1, win0_ch1_2, win0_ch1_3, win0_ch1_4)
+                5'b00010: `STORE_WIN(win0_ch2_0, win0_ch2_1, win0_ch2_2, win0_ch2_3, win0_ch2_4)
+                5'b00100: `STORE_WIN(win1_ch0_0, win1_ch0_1, win1_ch0_2, win1_ch0_3, win1_ch0_4)
+                5'b00101: `STORE_WIN(win1_ch1_0, win1_ch1_1, win1_ch1_2, win1_ch1_3, win1_ch1_4)
+                5'b00110: `STORE_WIN(win1_ch2_0, win1_ch2_1, win1_ch2_2, win1_ch2_3, win1_ch2_4)
+                5'b01000: `STORE_WIN(win2_ch0_0, win2_ch0_1, win2_ch0_2, win2_ch0_3, win2_ch0_4)
+                5'b01001: `STORE_WIN(win2_ch1_0, win2_ch1_1, win2_ch1_2, win2_ch1_3, win2_ch1_4)
+                5'b01010: `STORE_WIN(win2_ch2_0, win2_ch2_1, win2_ch2_2, win2_ch2_3, win2_ch2_4)
+                5'b01100: `STORE_WIN(win3_ch0_0, win3_ch0_1, win3_ch0_2, win3_ch0_3, win3_ch0_4)
+                5'b01101: `STORE_WIN(win3_ch1_0, win3_ch1_1, win3_ch1_2, win3_ch1_3, win3_ch1_4)
+                5'b01110: `STORE_WIN(win3_ch2_0, win3_ch2_1, win3_ch2_2, win3_ch2_3, win3_ch2_4)
+                5'b10000: `STORE_WIN(win4_ch0_0, win4_ch0_1, win4_ch0_2, win4_ch0_3, win4_ch0_4)
+                5'b10001: `STORE_WIN(win4_ch1_0, win4_ch1_1, win4_ch1_2, win4_ch1_3, win4_ch1_4)
+                5'b10010: `STORE_WIN(win4_ch2_0, win4_ch2_1, win4_ch2_2, win4_ch2_3, win4_ch2_4)
             endcase
         end
     end
