@@ -5,12 +5,22 @@
     reg signed [BITWIDTH-1:0] A3 [0:FEATURE_WIDTH-1]; \
     reg signed [BITWIDTH-1:0] A4 [0:FEATURE_WIDTH-1]
 
-`define READ_WIN(A0,A1,A2,A3,A4) begin \
-    ifmap_pipe1 <= A0[cur_feature_x]; \
-    ifmap_pipe2 <= A1[cur_feature_x]; \
-    ifmap_pipe3 <= A2[cur_feature_x]; \
-    ifmap_pipe4 <= A3[cur_feature_x]; \
-    ifmap_pipe5 <= A4[cur_feature_x]; \
+`define CAPTURE_SLOT(A00,A01,A02,A03,A04,A10,A11,A12,A13,A14,A20,A21,A22,A23,A24) begin \
+    slot_ch0_1 <= A00[cur_feature_x]; \
+    slot_ch0_2 <= A01[cur_feature_x]; \
+    slot_ch0_3 <= A02[cur_feature_x]; \
+    slot_ch0_4 <= A03[cur_feature_x]; \
+    slot_ch0_5 <= A04[cur_feature_x]; \
+    slot_ch1_1 <= A10[cur_feature_x]; \
+    slot_ch1_2 <= A11[cur_feature_x]; \
+    slot_ch1_3 <= A12[cur_feature_x]; \
+    slot_ch1_4 <= A13[cur_feature_x]; \
+    slot_ch1_5 <= A14[cur_feature_x]; \
+    slot_ch2_1 <= A20[cur_feature_x]; \
+    slot_ch2_2 <= A21[cur_feature_x]; \
+    slot_ch2_3 <= A22[cur_feature_x]; \
+    slot_ch2_4 <= A23[cur_feature_x]; \
+    slot_ch2_5 <= A24[cur_feature_x]; \
 end
 
 `define STORE_WIN(A0,A1,A2,A3,A4) begin \
@@ -67,11 +77,12 @@ module Convolver
     localparam WAIT_IMAGE    = 4'd5;
     localparam STORE_IMAGE   = 4'd6;
     localparam CLEAR_ACC     = 4'd7;
-    localparam READ_OPERAND  = 4'd8;
-    localparam MUL_MAC       = 4'd9;
-    localparam ACCUMULATE    = 4'd10;
-    localparam WRITE_FEATURE = 4'd11;
-    localparam DONE          = 4'd12;
+    localparam READ_SLOT     = 4'd8;
+    localparam READ_OPERAND  = 4'd9;
+    localparam MUL_MAC       = 4'd10;
+    localparam ACCUMULATE    = 4'd11;
+    localparam WRITE_FEATURE = 4'd12;
+    localparam DONE          = 4'd13;
 
     reg [3:0] cur_state, next_state;
     reg [6:0] cur_filter_idx, next_filter_idx;
@@ -94,6 +105,21 @@ module Convolver
     reg signed [BITWIDTH-1:0] filter_pipe3;
     reg signed [BITWIDTH-1:0] filter_pipe4;
     reg signed [BITWIDTH-1:0] filter_pipe5;
+    reg signed [BITWIDTH-1:0] slot_ch0_1;
+    reg signed [BITWIDTH-1:0] slot_ch0_2;
+    reg signed [BITWIDTH-1:0] slot_ch0_3;
+    reg signed [BITWIDTH-1:0] slot_ch0_4;
+    reg signed [BITWIDTH-1:0] slot_ch0_5;
+    reg signed [BITWIDTH-1:0] slot_ch1_1;
+    reg signed [BITWIDTH-1:0] slot_ch1_2;
+    reg signed [BITWIDTH-1:0] slot_ch1_3;
+    reg signed [BITWIDTH-1:0] slot_ch1_4;
+    reg signed [BITWIDTH-1:0] slot_ch1_5;
+    reg signed [BITWIDTH-1:0] slot_ch2_1;
+    reg signed [BITWIDTH-1:0] slot_ch2_2;
+    reg signed [BITWIDTH-1:0] slot_ch2_3;
+    reg signed [BITWIDTH-1:0] slot_ch2_4;
+    reg signed [BITWIDTH-1:0] slot_ch2_5;
 
     `DECL_WIN(win0_ch0_0, win0_ch0_1, win0_ch0_2, win0_ch0_3, win0_ch0_4);
     `DECL_WIN(win0_ch1_0, win0_ch1_1, win0_ch1_2, win0_ch1_3, win0_ch1_4);
@@ -183,6 +209,21 @@ module Convolver
             filter_pipe3 <= 0;
             filter_pipe4 <= 0;
             filter_pipe5 <= 0;
+            slot_ch0_1 <= 0;
+            slot_ch0_2 <= 0;
+            slot_ch0_3 <= 0;
+            slot_ch0_4 <= 0;
+            slot_ch0_5 <= 0;
+            slot_ch1_1 <= 0;
+            slot_ch1_2 <= 0;
+            slot_ch1_3 <= 0;
+            slot_ch1_4 <= 0;
+            slot_ch1_5 <= 0;
+            slot_ch2_1 <= 0;
+            slot_ch2_2 <= 0;
+            slot_ch2_3 <= 0;
+            slot_ch2_4 <= 0;
+            slot_ch2_5 <= 0;
         end
         else begin
             cur_state <= next_state;
@@ -197,23 +238,38 @@ module Convolver
             cur_channel <= next_channel;
             cur_acc <= next_acc;
 
-            if(cur_state == READ_OPERAND) begin
-                case({active_slot, cur_channel})
-                    5'b00000: `READ_WIN(win0_ch0_0, win0_ch0_1, win0_ch0_2, win0_ch0_3, win0_ch0_4)
-                    5'b00001: `READ_WIN(win0_ch1_0, win0_ch1_1, win0_ch1_2, win0_ch1_3, win0_ch1_4)
-                    5'b00010: `READ_WIN(win0_ch2_0, win0_ch2_1, win0_ch2_2, win0_ch2_3, win0_ch2_4)
-                    5'b00100: `READ_WIN(win1_ch0_0, win1_ch0_1, win1_ch0_2, win1_ch0_3, win1_ch0_4)
-                    5'b00101: `READ_WIN(win1_ch1_0, win1_ch1_1, win1_ch1_2, win1_ch1_3, win1_ch1_4)
-                    5'b00110: `READ_WIN(win1_ch2_0, win1_ch2_1, win1_ch2_2, win1_ch2_3, win1_ch2_4)
-                    5'b01000: `READ_WIN(win2_ch0_0, win2_ch0_1, win2_ch0_2, win2_ch0_3, win2_ch0_4)
-                    5'b01001: `READ_WIN(win2_ch1_0, win2_ch1_1, win2_ch1_2, win2_ch1_3, win2_ch1_4)
-                    5'b01010: `READ_WIN(win2_ch2_0, win2_ch2_1, win2_ch2_2, win2_ch2_3, win2_ch2_4)
-                    5'b01100: `READ_WIN(win3_ch0_0, win3_ch0_1, win3_ch0_2, win3_ch0_3, win3_ch0_4)
-                    5'b01101: `READ_WIN(win3_ch1_0, win3_ch1_1, win3_ch1_2, win3_ch1_3, win3_ch1_4)
-                    5'b01110: `READ_WIN(win3_ch2_0, win3_ch2_1, win3_ch2_2, win3_ch2_3, win3_ch2_4)
-                    5'b10000: `READ_WIN(win4_ch0_0, win4_ch0_1, win4_ch0_2, win4_ch0_3, win4_ch0_4)
-                    5'b10001: `READ_WIN(win4_ch1_0, win4_ch1_1, win4_ch1_2, win4_ch1_3, win4_ch1_4)
-                    5'b10010: `READ_WIN(win4_ch2_0, win4_ch2_1, win4_ch2_2, win4_ch2_3, win4_ch2_4)
+            if(cur_state == READ_SLOT) begin
+                case(active_slot)
+                    3'd0: `CAPTURE_SLOT(win0_ch0_0, win0_ch0_1, win0_ch0_2, win0_ch0_3, win0_ch0_4, win0_ch1_0, win0_ch1_1, win0_ch1_2, win0_ch1_3, win0_ch1_4, win0_ch2_0, win0_ch2_1, win0_ch2_2, win0_ch2_3, win0_ch2_4)
+                    3'd1: `CAPTURE_SLOT(win1_ch0_0, win1_ch0_1, win1_ch0_2, win1_ch0_3, win1_ch0_4, win1_ch1_0, win1_ch1_1, win1_ch1_2, win1_ch1_3, win1_ch1_4, win1_ch2_0, win1_ch2_1, win1_ch2_2, win1_ch2_3, win1_ch2_4)
+                    3'd2: `CAPTURE_SLOT(win2_ch0_0, win2_ch0_1, win2_ch0_2, win2_ch0_3, win2_ch0_4, win2_ch1_0, win2_ch1_1, win2_ch1_2, win2_ch1_3, win2_ch1_4, win2_ch2_0, win2_ch2_1, win2_ch2_2, win2_ch2_3, win2_ch2_4)
+                    3'd3: `CAPTURE_SLOT(win3_ch0_0, win3_ch0_1, win3_ch0_2, win3_ch0_3, win3_ch0_4, win3_ch1_0, win3_ch1_1, win3_ch1_2, win3_ch1_3, win3_ch1_4, win3_ch2_0, win3_ch2_1, win3_ch2_2, win3_ch2_3, win3_ch2_4)
+                    3'd4: `CAPTURE_SLOT(win4_ch0_0, win4_ch0_1, win4_ch0_2, win4_ch0_3, win4_ch0_4, win4_ch1_0, win4_ch1_1, win4_ch1_2, win4_ch1_3, win4_ch1_4, win4_ch2_0, win4_ch2_1, win4_ch2_2, win4_ch2_3, win4_ch2_4)
+                endcase
+            end
+            else if(cur_state == READ_OPERAND) begin
+                case(cur_channel)
+                    2'd0: begin
+                        ifmap_pipe1 <= slot_ch0_1;
+                        ifmap_pipe2 <= slot_ch0_2;
+                        ifmap_pipe3 <= slot_ch0_3;
+                        ifmap_pipe4 <= slot_ch0_4;
+                        ifmap_pipe5 <= slot_ch0_5;
+                    end
+                    2'd1: begin
+                        ifmap_pipe1 <= slot_ch1_1;
+                        ifmap_pipe2 <= slot_ch1_2;
+                        ifmap_pipe3 <= slot_ch1_3;
+                        ifmap_pipe4 <= slot_ch1_4;
+                        ifmap_pipe5 <= slot_ch1_5;
+                    end
+                    default: begin
+                        ifmap_pipe1 <= slot_ch2_1;
+                        ifmap_pipe2 <= slot_ch2_2;
+                        ifmap_pipe3 <= slot_ch2_3;
+                        ifmap_pipe4 <= slot_ch2_4;
+                        ifmap_pipe5 <= slot_ch2_5;
+                    end
                 endcase
                 filter_pipe1 <= filter_buf[filter_base];
                 filter_pipe2 <= filter_buf[filter_base + 1];
@@ -337,6 +393,9 @@ module Convolver
                 next_acc = 0;
                 next_kernel_row = 0;
                 next_channel = 0;
+                next_state = READ_SLOT;
+            end
+            READ_SLOT: begin
                 next_state = READ_OPERAND;
             end
             READ_OPERAND: begin
@@ -355,7 +414,7 @@ module Convolver
                 else if(cur_kernel_row != 4) begin
                     next_channel = 0;
                     next_kernel_row = cur_kernel_row + 1;
-                    next_state = READ_OPERAND;
+                    next_state = READ_SLOT;
                 end
                 else begin
                     next_channel = 0;
