@@ -52,6 +52,7 @@ module Convolver
     reg [4:0] cur_feature_y, next_feature_y;
     reg [2:0] cur_kernel_row, next_kernel_row;
     reg [1:0] cur_channel, next_channel;
+    reg [2:0] cur_operand_col, next_operand_col;
     reg signed [2*BITWIDTH-1:0] cur_acc, next_acc;
     reg signed [BITWIDTH-1:0] ifmap_pipe1;
     reg signed [BITWIDTH-1:0] ifmap_pipe2;
@@ -92,51 +93,35 @@ module Convolver
     wire [6:0] active_abs_row = cur_feature_y * 3 + cur_kernel_row;
     wire [2:0] active_slot = active_abs_row % 5;
     wire [6:0] base_col = cur_feature_x * 3;
-    wire [6:0] idx_col0 = base_col + 0;
-    wire [6:0] idx_col1 = base_col + 1;
-    wire [6:0] idx_col2 = base_col + 2;
-    wire [6:0] idx_col3 = base_col + 3;
-    wire [6:0] idx_col4 = base_col + 4;
+    wire [6:0] operand_col_idx = base_col + cur_operand_col;
 
-    reg signed [BITWIDTH-1:0] ifmap1;
-    reg signed [BITWIDTH-1:0] ifmap2;
-    reg signed [BITWIDTH-1:0] ifmap3;
-    reg signed [BITWIDTH-1:0] ifmap4;
-    reg signed [BITWIDTH-1:0] ifmap5;
+    reg signed [BITWIDTH-1:0] ifmap_operand;
 
     wire [6:0] filter_base = cur_channel * FILTER_WIDTH * FILTER_WIDTH +
                              cur_kernel_row * FILTER_WIDTH;
-    wire signed [BITWIDTH-1:0] filter1 = filter_buf[filter_base + 0];
-    wire signed [BITWIDTH-1:0] filter2 = filter_buf[filter_base + 1];
-    wire signed [BITWIDTH-1:0] filter3 = filter_buf[filter_base + 2];
-    wire signed [BITWIDTH-1:0] filter4 = filter_buf[filter_base + 3];
-    wire signed [BITWIDTH-1:0] filter5 = filter_buf[filter_base + 4];
+    wire signed [BITWIDTH-1:0] filter_operand = filter_buf[filter_base + cur_operand_col];
 
     wire signed [2*BITWIDTH-1:0] mac_result;
 
     always @ (*) begin
-        ifmap1 = 0;
-        ifmap2 = 0;
-        ifmap3 = 0;
-        ifmap4 = 0;
-        ifmap5 = 0;
+        ifmap_operand = 0;
 
         case({active_slot, cur_channel})
-            5'b00000: begin ifmap1 = row_buf0_ch0[idx_col0]; ifmap2 = row_buf0_ch0[idx_col1]; ifmap3 = row_buf0_ch0[idx_col2]; ifmap4 = row_buf0_ch0[idx_col3]; ifmap5 = row_buf0_ch0[idx_col4]; end
-            5'b00001: begin ifmap1 = row_buf0_ch1[idx_col0]; ifmap2 = row_buf0_ch1[idx_col1]; ifmap3 = row_buf0_ch1[idx_col2]; ifmap4 = row_buf0_ch1[idx_col3]; ifmap5 = row_buf0_ch1[idx_col4]; end
-            5'b00010: begin ifmap1 = row_buf0_ch2[idx_col0]; ifmap2 = row_buf0_ch2[idx_col1]; ifmap3 = row_buf0_ch2[idx_col2]; ifmap4 = row_buf0_ch2[idx_col3]; ifmap5 = row_buf0_ch2[idx_col4]; end
-            5'b00100: begin ifmap1 = row_buf1_ch0[idx_col0]; ifmap2 = row_buf1_ch0[idx_col1]; ifmap3 = row_buf1_ch0[idx_col2]; ifmap4 = row_buf1_ch0[idx_col3]; ifmap5 = row_buf1_ch0[idx_col4]; end
-            5'b00101: begin ifmap1 = row_buf1_ch1[idx_col0]; ifmap2 = row_buf1_ch1[idx_col1]; ifmap3 = row_buf1_ch1[idx_col2]; ifmap4 = row_buf1_ch1[idx_col3]; ifmap5 = row_buf1_ch1[idx_col4]; end
-            5'b00110: begin ifmap1 = row_buf1_ch2[idx_col0]; ifmap2 = row_buf1_ch2[idx_col1]; ifmap3 = row_buf1_ch2[idx_col2]; ifmap4 = row_buf1_ch2[idx_col3]; ifmap5 = row_buf1_ch2[idx_col4]; end
-            5'b01000: begin ifmap1 = row_buf2_ch0[idx_col0]; ifmap2 = row_buf2_ch0[idx_col1]; ifmap3 = row_buf2_ch0[idx_col2]; ifmap4 = row_buf2_ch0[idx_col3]; ifmap5 = row_buf2_ch0[idx_col4]; end
-            5'b01001: begin ifmap1 = row_buf2_ch1[idx_col0]; ifmap2 = row_buf2_ch1[idx_col1]; ifmap3 = row_buf2_ch1[idx_col2]; ifmap4 = row_buf2_ch1[idx_col3]; ifmap5 = row_buf2_ch1[idx_col4]; end
-            5'b01010: begin ifmap1 = row_buf2_ch2[idx_col0]; ifmap2 = row_buf2_ch2[idx_col1]; ifmap3 = row_buf2_ch2[idx_col2]; ifmap4 = row_buf2_ch2[idx_col3]; ifmap5 = row_buf2_ch2[idx_col4]; end
-            5'b01100: begin ifmap1 = row_buf3_ch0[idx_col0]; ifmap2 = row_buf3_ch0[idx_col1]; ifmap3 = row_buf3_ch0[idx_col2]; ifmap4 = row_buf3_ch0[idx_col3]; ifmap5 = row_buf3_ch0[idx_col4]; end
-            5'b01101: begin ifmap1 = row_buf3_ch1[idx_col0]; ifmap2 = row_buf3_ch1[idx_col1]; ifmap3 = row_buf3_ch1[idx_col2]; ifmap4 = row_buf3_ch1[idx_col3]; ifmap5 = row_buf3_ch1[idx_col4]; end
-            5'b01110: begin ifmap1 = row_buf3_ch2[idx_col0]; ifmap2 = row_buf3_ch2[idx_col1]; ifmap3 = row_buf3_ch2[idx_col2]; ifmap4 = row_buf3_ch2[idx_col3]; ifmap5 = row_buf3_ch2[idx_col4]; end
-            5'b10000: begin ifmap1 = row_buf4_ch0[idx_col0]; ifmap2 = row_buf4_ch0[idx_col1]; ifmap3 = row_buf4_ch0[idx_col2]; ifmap4 = row_buf4_ch0[idx_col3]; ifmap5 = row_buf4_ch0[idx_col4]; end
-            5'b10001: begin ifmap1 = row_buf4_ch1[idx_col0]; ifmap2 = row_buf4_ch1[idx_col1]; ifmap3 = row_buf4_ch1[idx_col2]; ifmap4 = row_buf4_ch1[idx_col3]; ifmap5 = row_buf4_ch1[idx_col4]; end
-            5'b10010: begin ifmap1 = row_buf4_ch2[idx_col0]; ifmap2 = row_buf4_ch2[idx_col1]; ifmap3 = row_buf4_ch2[idx_col2]; ifmap4 = row_buf4_ch2[idx_col3]; ifmap5 = row_buf4_ch2[idx_col4]; end
+            5'b00000: ifmap_operand = row_buf0_ch0[operand_col_idx];
+            5'b00001: ifmap_operand = row_buf0_ch1[operand_col_idx];
+            5'b00010: ifmap_operand = row_buf0_ch2[operand_col_idx];
+            5'b00100: ifmap_operand = row_buf1_ch0[operand_col_idx];
+            5'b00101: ifmap_operand = row_buf1_ch1[operand_col_idx];
+            5'b00110: ifmap_operand = row_buf1_ch2[operand_col_idx];
+            5'b01000: ifmap_operand = row_buf2_ch0[operand_col_idx];
+            5'b01001: ifmap_operand = row_buf2_ch1[operand_col_idx];
+            5'b01010: ifmap_operand = row_buf2_ch2[operand_col_idx];
+            5'b01100: ifmap_operand = row_buf3_ch0[operand_col_idx];
+            5'b01101: ifmap_operand = row_buf3_ch1[operand_col_idx];
+            5'b01110: ifmap_operand = row_buf3_ch2[operand_col_idx];
+            5'b10000: ifmap_operand = row_buf4_ch0[operand_col_idx];
+            5'b10001: ifmap_operand = row_buf4_ch1[operand_col_idx];
+            5'b10010: ifmap_operand = row_buf4_ch2[operand_col_idx];
         endcase
     end
 
@@ -182,6 +167,7 @@ module Convolver
             cur_feature_y <= 0;
             cur_kernel_row <= 0;
             cur_channel <= 0;
+            cur_operand_col <= 0;
             cur_acc <= 0;
             ifmap_pipe1 <= 0;
             ifmap_pipe2 <= 0;
@@ -203,19 +189,17 @@ module Convolver
             cur_feature_y <= next_feature_y;
             cur_kernel_row <= next_kernel_row;
             cur_channel <= next_channel;
+            cur_operand_col <= next_operand_col;
             cur_acc <= next_acc;
 
             if(cur_state == READ_OPERAND) begin
-                ifmap_pipe1 <= ifmap1;
-                ifmap_pipe2 <= ifmap2;
-                ifmap_pipe3 <= ifmap3;
-                ifmap_pipe4 <= ifmap4;
-                ifmap_pipe5 <= ifmap5;
-                filter_pipe1 <= filter1;
-                filter_pipe2 <= filter2;
-                filter_pipe3 <= filter3;
-                filter_pipe4 <= filter4;
-                filter_pipe5 <= filter5;
+                case(cur_operand_col)
+                    3'd0: begin ifmap_pipe1 <= ifmap_operand; filter_pipe1 <= filter_operand; end
+                    3'd1: begin ifmap_pipe2 <= ifmap_operand; filter_pipe2 <= filter_operand; end
+                    3'd2: begin ifmap_pipe3 <= ifmap_operand; filter_pipe3 <= filter_operand; end
+                    3'd3: begin ifmap_pipe4 <= ifmap_operand; filter_pipe4 <= filter_operand; end
+                    3'd4: begin ifmap_pipe5 <= ifmap_operand; filter_pipe5 <= filter_operand; end
+                endcase
             end
         end
     end
@@ -256,6 +240,7 @@ module Convolver
         next_feature_y = cur_feature_y;
         next_kernel_row = cur_kernel_row;
         next_channel = cur_channel;
+        next_operand_col = cur_operand_col;
         next_acc = cur_acc;
 
         case(cur_state)
@@ -268,6 +253,7 @@ module Convolver
                 next_feature_y = 0;
                 next_kernel_row = 0;
                 next_channel = 0;
+                next_operand_col = 0;
                 next_acc = 0;
             end
             ISSUE_FILTER: begin
@@ -316,10 +302,17 @@ module Convolver
                 next_acc = 0;
                 next_kernel_row = 0;
                 next_channel = 0;
+                next_operand_col = 0;
                 next_state = READ_OPERAND;
             end
             READ_OPERAND: begin
-                next_state = LOAD_MAC;
+                if(cur_operand_col == 4) begin
+                    next_operand_col = 0;
+                    next_state = LOAD_MAC;
+                end
+                else begin
+                    next_operand_col = cur_operand_col + 1;
+                end
             end
             LOAD_MAC: begin
                 next_state = MUL_MAC;
@@ -335,11 +328,13 @@ module Convolver
 
                 if(cur_channel != 2) begin
                     next_channel = cur_channel + 1;
+                    next_operand_col = 0;
                     next_state = READ_OPERAND;
                 end
                 else if(cur_kernel_row != 4) begin
                     next_channel = 0;
                     next_kernel_row = cur_kernel_row + 1;
+                    next_operand_col = 0;
                     next_state = READ_OPERAND;
                 end
                 else begin
