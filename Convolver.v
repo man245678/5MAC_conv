@@ -49,6 +49,7 @@ module Convolver
     reg [4:0] cur_state, next_state;
     reg [6:0] cur_filter_idx, next_filter_idx;
     reg [ADDR_WIDTH-1:0] cur_image_addr, next_image_addr;
+    reg [ADDR_WIDTH-1:0] cur_feature_addr, next_feature_addr;
     reg [1:0] cur_channel, next_channel;
     reg [6:0] cur_pixel_row, next_pixel_row;
     reg [6:0] cur_pixel_col, next_pixel_col;
@@ -106,7 +107,7 @@ module Convolver
 
     assign IMAGE_RAM_ADDRESS = cur_image_addr;
     assign FILTER_RAM_ADDRESS = cur_filter_idx;
-    assign FEATURE_RAM_ADDRESS = cur_out_x + cur_out_y * FEATURE_WIDTH;
+    assign FEATURE_RAM_ADDRESS = cur_feature_addr;
     assign FEATURE_RAM_DOUT = cur_acc;
     assign eoc = (cur_state == DONE);
 
@@ -134,6 +135,7 @@ module Convolver
             cur_state <= IDLE;
             cur_filter_idx <= 0;
             cur_image_addr <= 0;
+            cur_feature_addr <= 0;
             cur_channel <= 0;
             cur_pixel_row <= 0;
             cur_pixel_col <= 0;
@@ -167,6 +169,7 @@ module Convolver
             cur_state <= next_state;
             cur_filter_idx <= next_filter_idx;
             cur_image_addr <= next_image_addr;
+            cur_feature_addr <= next_feature_addr;
             cur_channel <= next_channel;
             cur_pixel_row <= next_pixel_row;
             cur_pixel_col <= next_pixel_col;
@@ -258,6 +261,7 @@ module Convolver
         next_state = cur_state;
         next_filter_idx = cur_filter_idx;
         next_image_addr = cur_image_addr;
+        next_feature_addr = cur_feature_addr;
         next_channel = cur_channel;
         next_pixel_row = cur_pixel_row;
         next_pixel_col = cur_pixel_col;
@@ -277,6 +281,7 @@ module Convolver
                 next_state = ISSUE_FILTER;
                 next_filter_idx = 0;
                 next_image_addr = 0;
+                next_feature_addr = 0;
                 next_channel = 0;
                 next_pixel_row = 0;
                 next_pixel_col = 0;
@@ -316,6 +321,7 @@ module Convolver
                     if(valid_output_pixel) begin
                         next_out_x = cur_scan_x;
                         next_out_y = cur_scan_y;
+                        next_feature_addr = cur_scan_x + cur_scan_y * FEATURE_WIDTH;
                         next_compute_channel = cur_channel;
                         next_kernel_row = 0;
                         next_state = PREP_OUTPUT;
